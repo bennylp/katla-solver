@@ -39,7 +39,9 @@ def make_guess(answers: Dict[str, List[int]], exclude_rule = 0, max = 5):
         for i in range(5):
             if result[i] >= MISS:
                 known_letters.add( word[i] )
-            if result[i]==NONE or exclude_rule==EXCLUDE_SEEN:
+            if exclude_rule==EXCLUDE_SEEN:
+                exclude_letters.add(word[i])
+            if result[i]==NONE:
                 exclude_letters.add(word[i])
             elif result[i]==CORRECT:
                 if exclude_rule==EXCLUDE_CORRECT:
@@ -50,7 +52,7 @@ def make_guess(answers: Dict[str, List[int]], exclude_rule = 0, max = 5):
     possible_letters: List[List[str]] = [[] for _ in range(5)]
 
     for i in range(5):
-        if exact_letters[i]:
+        if exact_letters[i] and exclude_rule==0:
             possible_letters_at_index = [exact_letters[i]]
         else:
             possible_letters_at_index = set()
@@ -77,7 +79,7 @@ def make_guess(answers: Dict[str, List[int]], exclude_rule = 0, max = 5):
             if word[i] in kl:
                 kl.remove(word[i])
 
-        if match and len(kl)==0:
+        if match and (len(kl)==0 or exclude_rule==EXCLUDE_SEEN):
             guesses[word] = value
 
         if len(guesses) >= max:
@@ -86,27 +88,34 @@ def make_guess(answers: Dict[str, List[int]], exclude_rule = 0, max = 5):
     return guesses
 
 
-def play(answers):
+
+def play(answers, verbosity=1):
     best_scores: Dict[str,int] = {}
     for retry, (word, results) in enumerate(answers.items()):
         for i in range(5):
             if results[i] > best_scores.get( word[i], 0):
                 best_scores[ word[i] ] = results[i]
         str_results = lambda results: ''.join([RESULT_CHARS[r] for r in results])
-        print(f'  {retry+1}. {word}: {str_results(results)}')
+        if verbosity:
+            print(f'  {retry+1}. {word}: {str_results(results)}')
 
     exclude_rule = (0 if sum(best_scores.values()) >= 5 else
                     EXCLUDE_SEEN if len(answers) < 2 else 
                     0)
+
     guesses = make_guess(answers, exclude_rule=exclude_rule, max=50)
-    if not guesses:
-        #print('Setting exclude_rule = False')
-        guesses = make_guess(answers, exclude_rule=0, max=50)
+    if not guesses and exclude_rule==EXCLUDE_SEEN:
+        exclude_rule = EXCLUDE_CORRECT
+        guesses = make_guess(answers, exclude_rule=exclude_rule, max=50)
+    if not guesses and exclude_rule==EXCLUDE_CORRECT:
+        exclude_rule = 0
+        guesses = make_guess(answers, exclude_rule=exclude_rule, max=50)
 
-    print('\nSaran kata tebakan berikutnya beserta skornya:')
-    for word, value in guesses.items():
-        print(f'  {word} {value:5d}')
-
+    if verbosity:
+        print('\nSaran kata tebakan berikutnya beserta valuenya:')
+        for word, value in guesses.items():
+            print(f'  {word} {value:5d}')
+    return guesses
 
 def get_results(guess: str, secret: str):
     results = []
@@ -119,11 +128,8 @@ def get_results(guess: str, secret: str):
             results.append( NONE )
     return results
 
-def simulate(secret=None, exclude_rules=[0]*MAX_RETRIES, verbosity=1):
+def simulate(secret, exclude_rules=[0]*MAX_RETRIES, verbosity=1):
     MAX_GUESSES = 15
-
-    if not secret:
-        secret = words[ randint(0, len(words)-1) ]
 
     if verbosity > 0:
         print(f'Secret word: {secret}')
@@ -133,19 +139,13 @@ def simulate(secret=None, exclude_rules=[0]*MAX_RETRIES, verbosity=1):
         if verbosity >= 2:
             print(f'Try {retry+1}:')
 
-        guesses = make_guess(answers, exclude_rule=exclude_rules[retry], max=MAX_GUESSES)
-        if not guesses:
-            guesses = make_guess(answers, exclude_rule=0, max=MAX_GUESSES)
-
-        if verbosity >= 2:
-            print(f'  Guesses: {guesses}')
+        guesses = play(answers, verbosity=0)
 
         the_guess = list(guesses.keys())[0]
         results = get_results(the_guess, secret)
 
         if verbosity >= 1:
             if len(guesses) >= MAX_GUESSES:
-                #chance = f' <{1 / len(guesses):2.0%}'
                 chance = '    '
             else:
                 chance = f'{1 / len(guesses):4.0%}'
@@ -163,15 +163,28 @@ def simulate(secret=None, exclude_rules=[0]*MAX_RETRIES, verbosity=1):
 def simulations(cnt, exclude_rules, verbosity=1):
     seed(100)
     retries = []
-    for _ in range(cnt):
-        retries.append( simulate(None, exclude_rules, verbosity=verbosity) )
+    nfailed = 0
 
-    print(f'Average: {sum(retries)/len(retries):.1f}')
+    if cnt >= len(words):
+        secrets = words
+    else:
+        secrets = [words[ randint(0, len(words)-1) ] for _ in range(cnt)]
+
+    print(f'Guessing {len(secrets)} words')
+
+    for secret in secrets:
+        retry = simulate(secret, exclude_rules, verbosity=verbosity)
+        retries.append( retry )
+        if retry > 6:
+            nfailed += 1
+
+    print(f'Average: {sum(retries)/len(retries):.1f} tebakan')
+    print(f'Failed : {nfailed} ({nfailed/cnt:.1%})')
 
 
 def main():
     parser = ArgumentParser(prog='katla solver')
-    parser.add_argument('command', choices=['play', 'sim'])
+    parser.add_argument('command', choices=['play', 'sim', 'guess'])
     parser.add_argument('answer', nargs='*',
                         help='Format: word=score, e.g: bijak=00210, where bijak is the '
                              'word (i.e. your guess), 0=letter does not '
@@ -183,6 +196,7 @@ def main():
 
     args = parser.parse_args()
 
+    exclude_rules = [EXCLUDE_SEEN, EXCLUDE_SEEN] + [0]*(MAX_RETRIES-2)
     if args.command == 'play':
         answers = {}
         for arg in args.answer:
@@ -197,9 +211,10 @@ def main():
         play(answers)
 
     elif args.command == 'sim':
-        exclude_rules = [EXCLUDE_SEEN, EXCLUDE_SEEN] + [0]*(MAX_RETRIES-2)
         simulations(args.count, exclude_rules=exclude_rules, verbosity=args.verbosity)
 
+    elif args.command == 'guess':
+        simulate(args.answer[0], exclude_rules)
 
 if __name__ == '__main__':
     main()
