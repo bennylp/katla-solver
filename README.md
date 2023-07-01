@@ -59,7 +59,7 @@ Jadi untuk hasil di atas, skornya adalah 🟨 🟩 ⬜️ ⬜️ ⬜️ ==> **1 
 ### Tebakan 3:
 
 ```
-$ $ python main.py play kerai=01000 lotus=12000
+$ python main.py play kerai=01000 lotus=12000
   1. kerai: ⬜️🟨⬜️⬜️⬜️
   2. lotus: 🟨🟩⬜️⬜️⬜️
 
@@ -72,14 +72,14 @@ Saran kata tebakan berikutnya beserta valuenya:
   .. dipotong ..
 ```
 
-Sesuai saran di atas, kali ini kita masukkan kata **molen** ke aplikasi Katla, karena kata ini lebih familiar dibanding **polen** dan valuenya tidak jauh berbeda. Niscaya Anda akan mendapatkan hasil sbb:
+Sesuai daftar di atas, kali ini kita masukkan kata **molen** ke aplikasi Katla, karena kata ini lebih familiar dibanding **polen** dan valuenya tidak jauh berbeda. Niscaya Anda akan mendapatkan hasil sbb:
 
-🟨🟩🟨🟩⬜️
+🟨🟩🟨🟩⬜️ => 1 2 1 2 0
 
 ### Tebakan 4:
 
 ```
-$ $ python main.py play kerai=01000 lotus=12000 molen=12120
+$ python main.py play kerai=01000 lotus=12000 molen=12120
   1. kerai: ⬜️🟨⬜️⬜️⬜️
   2. lotus: 🟨🟩⬜️⬜️⬜️
   3. molen: 🟨🟩🟨🟩⬜️
@@ -120,7 +120,7 @@ Bisa melakukan simulasi untuk melihat langkah-langkah:
 
 ```
 $ python main.py sim -c 5
-Guessing 5 words
+Guessing 5 random words
 Secret word: geret
   1. kerai [chance:    ]: ⬜️🟩🟩⬜️⬜️
   2. lotus [chance:    ]: ⬜️⬜️🟨⬜️⬜️
@@ -162,7 +162,7 @@ Menebak seluruh kata dalam korpus:
 
 ```
 $ time python main.py sim -c 8311 --verbosity=0
-Guessing 8311 words
+Guessing all 8311 words
 Average: 4.5 tebakan
 Failed : 661 (6.6%)
 

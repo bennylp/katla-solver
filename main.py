@@ -167,10 +167,10 @@ def simulations(cnt, exclude_rules, verbosity=1):
 
     if cnt >= len(words):
         secrets = words
+        print(f'Guessing all {len(secrets)} words')
     else:
         secrets = [words[ randint(0, len(words)-1) ] for _ in range(cnt)]
-
-    print(f'Guessing {len(secrets)} words')
+        print(f'Guessing {len(secrets)} random words')
 
     for secret in secrets:
         retry = simulate(secret, exclude_rules, verbosity=verbosity)
